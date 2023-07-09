@@ -1,0 +1,370 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Project Pisces: CFN Stack Set Template To Create S3 Bucket with Cross Region / Cross Account Replication Enabled. 
+
+Metadata:
+  TemplateName: pisces-s3-stack.yaml
+  TemplateType: S3 bucket with
+  Version: 1.0.0
+  Owner: Subhamay Bhattacharyya
+  ProjectName: Pisces
+  Modification History:
+    - 1.0.0  - Jul 06, 2023   -- Initial Version 
+  Resources: 
+    - S3 Cross Region / Cross Account Replication
+  StepsToTest: |
+    Manualy verify the Stack.
+  StepsToCleanup: |
+    Stack delete command
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    #################################### Project Name and Environment ##############################
+    - Label: 
+        default: "Project And Environment:"
+      Parameters: 
+      - ProjectName
+      - Environment
+    #################################### Code Repository Bucket ####################################
+    - Label: 
+        default: "Code Repository S3 Bucket:"
+      Parameters: 
+      - CodeRepositoryS3Bucket
+    #################################### AWS Regions ###############################################
+    - Label: 
+        default: "Regions"
+      Parameters: 
+      - Region1
+      - Region2
+      - Region3
+    #################################### KMS Key Ids ###############################################
+    - Label: 
+        default: "KMS Key Aliases and Id:"
+      Parameters: 
+      - S3KmsMasterKeyAlias
+      - S3KmsMasterKeyIdRegion1
+      - S3KmsMasterKeyIdRegion2
+      - S3KmsMasterKeyIdRegion3
+    #################################### S3 Bucket #################################################
+    - Label: 
+        default: "Bucket Configuration:"
+      Parameters: 
+      - S3BucketBaseName
+      - S3BucketBlockPublicAcls
+      - S3BucketBlockPublicPolicy
+      - S3BucketIgnorePublicAcls
+      - S3BucketRestrictPublicBuckets
+    ParameterLabels:
+    #################################### Project Name and Environment ##############################
+    - Label: 
+        default: "Project And Environment:"
+      ProjectName:
+        default: "Project Name."
+      Environment:
+        default: "Environment Name."
+    #################################### Code Repository Bucket ####################################
+    - Label: 
+        default: "Code Repository S3 Bucket:"
+      CodeRepositoryS3Bucket:
+        default: "S3 Bucket Name used as code repository."
+    #################################### Regions ###################################################
+    - Label: 
+        default: "AWS Regions:"
+      Region1: 
+        default: "Region-1 where the S3 bucket will be created."
+      Region2: 
+        default: "Region-2 where the S3 bucket will be created."
+      Region3:
+        default: "Region-3 in AWS Second Account where the S3 bucket will be created."
+    #################################### KMS Key ###################################################
+    - Label: 
+        default: "KMS Key Alias and Id:"
+      Parameters: 
+        - S3KmsMasterKeyAlias:
+            default: "KMS Key Alias."
+        - S3KmsMasterKeyIdRegion1:
+            default: "KMS Key Id to be used in Region-1."
+        - S3KmsMasterKeyIdRegion2:
+            default: "KMS Key Id to be used in Region-2"
+        - S3KmsMasterKeyIdRegion3:
+            default: "KMS Key Id to be used in Region-3."
+Parameters:
+  ###################################### Project Name and Environment ##############################
+  ProjectName:
+    Default: pisces
+    Description: "The Project Name."
+    Type: String
+    MinLength: 5
+    MaxLength: 30
+    AllowedPattern: "[a-z]*"
+    ConstraintDescription: "The length should be between 5 and 30, must contain only lowercase alphabets."
+  Environment:
+    Default: devl
+    Description: "The Environment Name."
+    Type: String
+    AllowedValues: ["devl", "test", "prod"]
+    ConstraintDescription: "The Environment must be devl / test or prod" 
+  ###################################### Project Name and Environment ##############################
+  AWSSecondAccount:
+    Default: 508634243190
+    Type: Number
+    Description: The AWS Second account where the S3 bucket will be created.
+  ###################################### Code Repository Bucket ####################################
+  CodeRepositoryS3Bucket:
+    Default: subhamay-projects-repository-us-east-1
+    Description: "S3 Bucket Storing The Lambda Code."
+    Type: String
+    MinLength: 10
+    MaxLength: 40
+    AllowedPattern: "[a-z][a-z0-9-.]*"
+    ConstraintDescription: "The length should be between 3 and 63, must contain only lowercase letter,numbers,dash, dot and should start with a letter."
+  ###################################### Regions ###################################################
+  Region1:
+    Default: us-east-1
+    Type: String
+    Description: Region-1 where the bucket will be created
+    AllowedValues:
+    - us-east-1
+  Region2:
+    Default: us-east-2
+    Type: String
+    Description: Region-2 where the bucket will be created
+    AllowedValues:
+    - us-east-2
+  Region3:
+    Default: us-west-1
+    Type: String
+    Description: Region-2 in Account-2 where the bucket will be created
+    AllowedValues:
+    - us-west-1
+  ###################################### KMS Key ###################################################
+  S3KmsMasterKeyAlias:
+      Default: "SB-KMS"
+      Description: "The KMS Master Key Alias To Be Used For Server Side Encryption."
+      Type: String
+      MinLength: 5
+      MaxLength: 20
+      AllowedPattern: "[a-zA-Z0-9-]*"
+      ConstraintDescription: "The length of the KMS Key Alias should be beteen 5 and 20 and can only contain lowercase alphanumeric characters and dash."
+  S3KmsMasterKeyIdRegion1:
+    Default: "e4c733c5-9fbe-4a90-bda1-6f0362bc9b89"
+    Description: "The KMS Master Key Id To Be Used For Server Side Encryption In Region 1."
+    Type: String
+    MinLength: 36
+    MaxLength: 36
+    AllowedPattern: "[a-z0-9-]*"
+    ConstraintDescription: "The length of the KMS Key Id should be 36 and should contain lower case alphabets, numbers and dash."
+  S3KmsMasterKeyIdRegion2:
+    Default: "dfc9fe4a-7021-4eb8-a8e9-520a2f91f4f2"
+    Description: "The KMS Master Key Id To Be Used For Server Side Encryption In Region 2."
+    Type: String
+    MinLength: 36
+    MaxLength: 36
+    AllowedPattern: "[a-z0-9-]*"
+    ConstraintDescription: "The length of the KMS Key Id should be 36 and should contain lower case alphabets, numbers and dash."
+  S3KmsMasterKeyIdRegion3:
+    Default: "5d89bab8-d143-44ea-856d-9dac297fec67"
+    Description: "The KMS Master Key Id To Be Used For Server Side Encryption In Region 3."
+    Type: String
+    MinLength: 36
+    MaxLength: 36
+    AllowedPattern: "[a-z0-9-]*"
+    ConstraintDescription: "The length of the KMS Key Id should be 36 and should contain lower case alphabets, numbers and dash."
+  ###################################### S3 Bucket #################################################
+  S3BucketBaseName:
+    Default: bucket
+    Description: "The S3 Bucket Base Name For The Source Data, The Region Will Be Added As Suffix By The Template."
+    Type: String
+    MinLength: 3
+    MaxLength: 40
+    AllowedPattern: "[a-z][a-z0-9-.]*"
+    ConstraintDescription: "The length should be between 3 and 40, must contain only lowercase letter,numbers,dash, dot and should start with a letter."
+  S3BucketBlockPublicAcls:
+    Default: true
+    Description: "Allow Block Public Acls"
+    Type: String
+    AllowedValues: [true, false]
+  S3BucketBlockPublicPolicy:
+    Default: true
+    Description: "Allow Block Public Policy"
+    Type: String
+    AllowedValues: [true, false]
+  S3BucketIgnorePublicAcls:
+    Default: true
+    Description: "Allow Ignore Public Acls"
+    Type: String
+    AllowedValues: [true, false]
+  S3BucketRestrictPublicBuckets:
+    Default: true
+    Description: "Allow Restrict Public Buckets"
+    Type: String
+    AllowedValues: [true, false]
+Resources:
+  S3BucketsRegion2AndRegion3:
+    Type: AWS::CloudFormation::StackSet
+    Properties:
+      StackSetName: !Ref AWS::StackName
+      PermissionModel: SELF_MANAGED
+      StackInstancesGroup:
+        - Regions:
+            - !Ref Region2
+          DeploymentTargets:
+            Accounts:
+              - !Ref AWS::AccountId
+        - Regions:
+            - !Ref Region3
+          DeploymentTargets:
+            Accounts:
+              - !Ref AWSSecondAccount
+      TemplateURL: !Sub 'https://${CodeRepositoryS3Bucket}.s3.amazonaws.com/0007-pisces/cft/s3-stack-template.yaml'
+  S3ReplicationRole: 
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-s3-crr-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - s3.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${ProjectName}-s3-crr-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: AllowReadS3BucketConfiguration
+              Effect: Allow
+              Action: 
+                - s3:GetReplicationConfiguration
+                - s3:ListBucket
+              Resource: 
+                - !Sub 'arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWS::AccountId}-${Environment}-${Region1}'
+            - Sid: AllowGetS3SourceBucketObjectVersion
+              Effect: Allow
+              Action: 
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionTagging
+                - s3:GetObjectRetention
+                - s3:GetObjectLegalHold
+              Resource: 
+                - !Sub 'arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWS::AccountId}-${Environment}-${Region1}/*'
+            - Sid: AllowS3ObjectReplication
+              Effect: Allow
+              Action: 
+                - s3:ReplicateObject
+                - s3:ReplicateDelete
+                - s3:ReplicateTags
+                - s3:ObjectOwnerOverrideToBucketOwner
+              Resource: 
+                - !Sub 'arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWS::AccountId}-${Environment}-${Region2}/*'
+                - !Sub 'arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWSSecondAccount}-${Environment}-${Region3}/*'
+            - Sid: AllowSourceBucketKMSDecryption
+              Effect: Allow
+              Action: 
+                - kms:Decrypt
+              Condition: 
+                StringLike:
+                  "kms:ViaService": !Sub "s3.${Region1}.amazonaws.com"
+                  "kms:EncryptionContext:aws:s3:arn": 
+                  - !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWS::AccountId}-${Environment}-${Region1}"
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:kms:${Region1}:${AWS::AccountId}:key/${S3KmsMasterKeyIdRegion1}'
+            - Sid: AllowDestination1BucketKMSEncryption
+              Effect: Allow
+              Action: 
+                - kms:Encrypt
+              Condition: 
+                StringLike:
+                  "kms:ViaService": !Sub "s3.${Region2}.amazonaws.com"
+                  "kms:EncryptionContext:aws:s3:arn": 
+                  - !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWS::AccountId}-${Environment}-${Region2}"
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:kms:${Region2}:${AWS::AccountId}:key/${S3KmsMasterKeyIdRegion2}'
+            - Sid: AllowDestination2BucketKMSEncryption
+              Effect: Allow
+              Action: 
+                - kms:Encrypt
+              Condition: 
+                StringLike:
+                  "kms:ViaService": !Sub "s3.${Region3}.amazonaws.com"
+                  "kms:EncryptionContext:aws:s3:arn": 
+                  - !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWSSecondAccount}-${Environment}-${Region3}"
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:kms:${Region3}:${AWSSecondAccount}:key/${S3KmsMasterKeyIdRegion3}'
+      Tags: 
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key:  Environment
+          Value: !Ref Environment
+  S3BucketWithReplicationConfiguration:
+    DependsOn:
+      - S3BucketsRegion2AndRegion3
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-${S3BucketBaseName}-${AWS::AccountId}-${Environment}-${AWS::Region}"
+      BucketEncryption:
+          ServerSideEncryptionConfiguration: 
+          - BucketKeyEnabled: True
+            ServerSideEncryptionByDefault: 
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !Sub 'alias/${S3KmsMasterKeyAlias}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: !Ref S3BucketBlockPublicAcls
+        BlockPublicPolicy: !Ref S3BucketBlockPublicPolicy
+        IgnorePublicAcls: !Ref S3BucketIgnorePublicAcls
+        RestrictPublicBuckets: !Ref S3BucketRestrictPublicBuckets
+      ReplicationConfiguration:
+        Role: !GetAtt S3ReplicationRole.Arn
+        Rules:
+        - Id: rule-1
+          Destination:
+            Bucket: !Sub 'arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWS::AccountId}-${Environment}-${Region2}'
+            StorageClass: STANDARD_IA
+            EncryptionConfiguration:
+              ReplicaKmsKeyID: !Sub 'arn:${AWS::Partition}:kms:${Region2}:${AWS::AccountId}:key/${S3KmsMasterKeyIdRegion2}'
+          Filter:
+            Prefix: ''
+          Status: Enabled
+          Priority: 0
+          DeleteMarkerReplication:
+            Status: Enabled
+          SourceSelectionCriteria:
+            ReplicaModifications: 
+              Status: Enabled
+            SseKmsEncryptedObjects: 
+              Status: Enabled
+        - Id: rule-2
+          Destination:
+            Bucket: !Sub 'arn:${AWS::Partition}:s3:::${ProjectName}-${S3BucketBaseName}-${AWSSecondAccount}-${Environment}-${Region3}'
+            StorageClass: GLACIER_IR
+            EncryptionConfiguration:
+              ReplicaKmsKeyID: !Sub 'arn:${AWS::Partition}:kms:${Region3}:${AWSSecondAccount}:key/${S3KmsMasterKeyIdRegion3}'
+            AccessControlTranslation:
+              Owner: Destination
+            Account: !Ref AWSSecondAccount
+          Filter:
+            Prefix: ''
+          Priority: 1
+          Status: Enabled
+          DeleteMarkerReplication:
+            Status: Enabled
+          SourceSelectionCriteria:
+            ReplicaModifications: 
+              Status: Enabled
+            SseKmsEncryptedObjects: 
+              Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key:  Environment
+          Value: !Ref Environment
+Outputs:
+  PiscesS3ReplicationRoleArn:
+    Description: The Arn of S3 Replication Role
+    Value: !GetAtt S3ReplicationRole.Arn
